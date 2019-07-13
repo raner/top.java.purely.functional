@@ -54,7 +54,8 @@ import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterrup
 * <br>
 * Running this class will produce output about how long it took to execute a method that
 * just consists of a sleep statement. Typically, the measured execution time will be a few
-* milliseconds longer than the sleep time because threads don't resume instantaneously.
+* milliseconds longer than the sleep time because sleeping threads may not always resume
+* instantaneously.
 * <br>
 * This class is not much more than 50 lines of actual code, but since its real purpose is
 * explaining purely functional programming (which is not always straightforward) it contains
@@ -65,12 +66,12 @@ import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterrup
 public class PureTimeAndRandomness
 {
   /**
-  * Provides the bridge between the reactive example code and Java's side-effect-based
+  * Provides the bridge between the functional-reactive example code and Java's side-effect-based
   * console I/O. This method bootstraps the example and injects the current system time
-  * as a seed for the random number generator. Random sleep times are configured to be
-  * chosen between 0 and 2500 milliseconds.
+  * as a seed for the random number generator (it does the latter in a purely functional manner,
+  * though). Random sleep times are configured to be chosen between 0 and 2000 milliseconds.
   * <br>
-  * As a bridge to non-pure, non-functional code, this method is the only method in the
+  * As a bridge to surrounding non-pure, non-functional code, this method is the only method in the
   * example that cannot be considered pure, because (among other things) it uses
   * {@link java.io.PrintStream#println()} to cause the side effect of something showing up on
   * the console. However, this impurity is completely isolated and localized to this method,
@@ -78,28 +79,35 @@ public class PureTimeAndRandomness
   **/
   public static void main(String... arguments)
   {
-    Observable.just(new PureTimeAndRandomness()).timestamp().
-      map(timed -> timed.value().timeRandomSleeps(timed.value().random(timed.time(), 2500))).
+    PureTimeAndRandomness instance = new PureTimeAndRandomness();
+    Function<Integer, Duration> timedMethod =
+      sleep -> instance.sleepForGivenAmountOfMilliseconds(Duration.ofMillis(sleep));
+    Observable.
+      just(instance).timestamp().
+      map(timed -> instance.timeMethodWithRandomInputs(instance.random(timed.time(), 2000), timedMethod)).
       subscribe(execution -> execution.subscribe(System.err::println));
   }
 
   /**
   * Provides an example method whose execution time is to be measured. The method will sleep for a
-  * given number of milliseconds and return its input. Even this method is technically pure: it returns
-  * the same output for the same input (in fact, its output <i>is</i> its input), and it does not
-  * have any state-changing side effects. The only "side effect" it has is that it takes a variable
-  * amount of time depending on its input. However, the same is true for most methods, including pure
-  * ones, so this can hardly be counted as an impure side effect.
+  * given number of milliseconds and return its input, which makes it easy to validate if the measured
+  * time is accurate: the measured time should only be a few milliseconds more than the requested sleep
+  * time.
+  * <br>
+  * Even this method is technically pure: it returns the same output for the same input (in fact, its
+  * output always the same as its input), and it does not have any state-changing side effects. The
+  * only "side effect" it has is that it takes a variable amount of time to complete, depending on its
+  * input. However, the same is true for most methods, including pure ones, so this can hardly be
+  * counted as an impure side effect.
   *
-  * @param input the arbitrarily typed input of the method
-  * @param getSleepTime a {@link Function} to extract the sleep time from the input
+  * @param sleepTime the amount of milliseconds the method should sleep
   * @return always the original input argument (this facilitates running the method in a
   * functional-reactive processing pipeline)
   **/
-  <_Type_> _Type_ sleepForGivenAmountOfMilliseconds(_Type_ input, Function<_Type_, Duration> getSleepTime)
+  Duration sleepForGivenAmountOfMilliseconds(Duration sleepTime)
   {
-    sleepUninterruptibly(getSleepTime.apply(input).toMillis(), MILLISECONDS);
-    return input;
+    sleepUninterruptibly(sleepTime.toMillis(), MILLISECONDS);
+    return sleepTime;
   }
 
   /**
@@ -126,14 +134,12 @@ public class PureTimeAndRandomness
   * <ul>
   *  <li> <b>input</b> of random integers indicating sleep time
   *   &rarr; {@link Observable}&lt;{@link Integer}&gt;
-  *  <li> actual sleep durations
-  *   &rarr; {@link Observable}&lt;{@link Duration}&gt;
   *  <li> time-stamped durations, before timed method is executed
-  *   &rarr; {@link Observable}&lt;{@link Timed}&lt;{@link Duration}&gt;&gt;
+  *   &rarr; {@link Observable}&lt;{@link Timed}&lt;{@link Integer}&gt;&gt;
   *  <li> time-stamped durations, after timed method was executed
-  *   &rarr; {@link Observable}&lt;{@link Timed}&lt;{@link Duration}&gt;&gt;
+  *   &rarr; {@link Observable}&lt;{@link Timed}&lt;{@link Integer}&gt;&gt;
   *  <li> durations with both start and finish time stamp
-  *   &rarr; {@link Observable}&lt;{@link Timed}&lt;{@link Timed}&lt;{@link Duration}&gt;&gt;&gt;
+  *   &rarr; {@link Observable}&lt;{@link Timed}&lt;{@link Timed}&lt;{@link Integer}&gt;&gt;&gt;
   *  <li> <b>output</b> to console, intended for {@link System#out}/{@link System#err}
   *   &rarr; {@link Observable}&lt;{@link String}&gt;
   * </ul>
@@ -143,28 +149,34 @@ public class PureTimeAndRandomness
   * a consumer (see {@link #main(String...) main} method). In a functional-reactive manner, this method
   * transforms one random number into one output message that includes information about the timed
   * method execution.
-  * The key to purely functional execution time measurement, very similar to the imperative pattern,
+  * The key to purely functional time measurement, very similar to the imperative pattern,
   * is to have two time stamps, one before and one after the execution. This is reflected by the nested
   * {@link Timed}&lt;{@link Timed}&lt;...&gt;&gt; types, which is a bit unwieldy in Java. However, Java
   * was not designed for this style of programming, so one cannot expect the code to look particularly
   * elegant.
   *
-  * @param randomNumbers an infinite series of random numbers
+  * @param random an infinite series of random numbers
+  * @param method the method to be timed
   * @return an {@link Observable} of messages intended for the console
   **/
-  Observable<String> timeRandomSleeps(Observable<Integer> randomNumbers)
+  Observable<String> timeMethodWithRandomInputs(Observable<Integer> random, Function<Integer, ?> method)
   {
-    final Format message = new MessageFormat("Sleeping for {0}ms was measured to take {1}ms (off by {2}ms)");
-    final Observable<Timed<Timed<Duration>>> timedStartsAndFinishes = randomNumbers.
-      map(Duration::ofMillis).timestamp().
-      map(sleep -> sleepForGivenAmountOfMilliseconds(sleep, Timed::value)).timestamp();
+    final Format message = new MessageFormat("Calling timed method with argument {0} took {1}ms");
+    final Observable<Timed<Timed<Integer>>> timedStartsAndFinishes = random.
+      timestamp().
+      map(input ->
+      {
+        method.apply(input.value());
+        return input;
+      }).
+      timestamp();
     return timedStartsAndFinishes.map(timed ->
     {
-      final long slept = timed.value().value().toMillis();
+      final Integer input = timed.value().value();
       final long started = timed.value().time();
       final long finished = timed.time();
       final long measured = finished - started;
-      final Object[] info = {slept, measured, measured - slept};
+      final Object[] info = {input, measured};
       return message.format(info);
     });
   }
