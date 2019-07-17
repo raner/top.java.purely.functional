@@ -9,4 +9,30 @@ public interface Utilities
     return (first, second) -> consumer.accept(second, first);
   }
 
+  default <_First_, _Second_> java.util.function.BiFunction<_First_, _Second_, _First_> first(BiConsumer<_First_, _Second_> consumer)
+  {
+    return (first, second) ->
+    {
+      consumer.accept(first, second);
+      return first;
+    };
+  }
+  
+  default <_First_, _Second_> java.util.function.BiFunction<_First_, _Second_, _First_> flippedFirst(BiConsumer<_Second_, _First_> consumer)
+  {
+    return (first, second) ->
+    {
+      consumer.accept(second, first);
+      return first;
+    };
+  }
+  
+  default <_First_, _Second_> java.util.function.BiFunction<_First_, _Second_, _Second_> second(BiConsumer<_First_, _Second_> consumer)
+  {
+    return (first, second) ->
+    {
+      consumer.accept(first, second);
+      return second;
+    };
+  }
 }

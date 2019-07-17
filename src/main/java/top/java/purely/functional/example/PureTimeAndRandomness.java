@@ -134,17 +134,31 @@ public class PureTimeAndRandomness implements Utilities
     final double ratio = MAX_VALUE/(double)max;
     top.java.purely.functional.utilities.BiConsumer<Long, Emitter<Long>> b = reverse(Emitter::onNext);//.andReturn(null);
     //sreverse(Emitter::onNext).toString();
-    top.java.purely.functional.utilities.BiConsumer<Long, Emitter<Long>> andReturnFirst = b.andReturnFirst(next -> {System.err.println(next); return (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);});
+    top.java.purely.functional.utilities.BiFunction<Long, Emitter<Long>, Long> andReturnFirst = b.andReturnFirst(next -> (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1));
     io.reactivex.functions.BiConsumer<Long, Emitter<Long>> bc =  null;
     Callable<Long> sc = () -> seed;
 //    io.reactivex.functions.BiConsumer y = null;
 //    Callable<Long> x = null;
+    
+    
+    //first(Emitter::onNext);
+    BiFunction<Long, Emitter<Long>, Long> emitItem = flippedFirst(Emitter::onNext);
+    BiFunction<Long, Emitter<Long>, Long> andThen = emitItem.andThen(next -> (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1));
+    io.reactivex.functions.BiFunction<Long, Emitter<Long>, Long> generator = (next, emitter) -> {
+      
+    emitter.onNext(next);// = (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1));
+    return (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
+    };
+    top.java.purely.functional.utilities.BiFunction<Long, Emitter<Long>, Long> emit = (next, emitter) -> {
+      emitter.onNext(next);
+      return next;
+    };
+    java.util.function.Function<Long, Long> forward = (next) -> {
+      return (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
+    };
+    generator = emit.andThen(forward)::apply;
     Observable<Long> prng = Observable.
-      generate(sc, andReturnFirst); //(next, emitter) -> {
-//        
-//      emitter.onNext(next);// = (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1));
-//      return (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
-//      });
+      generate(sc, this.<Long, Emitter<Long>>flippedFirst(Emitter::onNext).andThen(next -> (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1))::apply); //ReturnFirst);//generator);
     return prng.skip(1).map(number -> (int)(abs((int)(number >>> 16))/ratio));
   }
 
