@@ -15,16 +15,18 @@
 //                                                                          //
 package top.java.purely.functional.example;
 
-import java.text.Format;
-import java.text.MessageFormat;
 import java.time.Duration;
-import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import java.util.stream.Stream;
+import java.util.concurrent.Callable;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import io.reactivex.Emitter;
 import io.reactivex.Observable;
+import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Timed;
+import top.java.purely.functional.utilities.Utilities;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.abs;
+import static java.text.MessageFormat.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 
@@ -63,7 +65,7 @@ import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterrup
 *
 * @author Mirko Raner
 **/
-public class PureTimeAndRandomness
+public class PureTimeAndRandomness implements Utilities
 {
   /**
   * Provides the bridge between the functional-reactive example code and Java's side-effect-based
@@ -110,6 +112,15 @@ public class PureTimeAndRandomness
     return sleepTime;
   }
 
+  interface Returnable
+  {
+    default <_First_, _Second_, _Return_> BiFunction<_First_, _Second_, _Return_> andReturn(_Return_ expression)
+    {
+      return null;
+    }
+  }
+
+  
   /**
   * Creates a functional-reactive pseudo-random number generator (PRNG). This method uses the
   * same linear-congruential PRNG that is used by {@link java.util.Random#next(int)}.
@@ -121,10 +132,20 @@ public class PureTimeAndRandomness
   Observable<Integer> random(long seed, int max)
   {
     final double ratio = MAX_VALUE/(double)max;
-    final UnaryOperator<Long> prng = number -> (number * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
-    final Stream<Long> seeds = Stream.iterate(seed, prng).skip(1);
-    final Stream<Integer> random = seeds.map(number -> (int)(number >>> 16));
-    return Observable.fromIterable(random::iterator).map(number -> (int)(abs(number)/ratio));
+    top.java.purely.functional.utilities.BiConsumer<Long, Emitter<Long>> b = reverse(Emitter::onNext);//.andReturn(null);
+    //sreverse(Emitter::onNext).toString();
+    top.java.purely.functional.utilities.BiConsumer<Long, Emitter<Long>> andReturnFirst = b.andReturnFirst(next -> {System.err.println(next); return (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);});
+    io.reactivex.functions.BiConsumer<Long, Emitter<Long>> bc =  null;
+    Callable<Long> sc = () -> seed;
+//    io.reactivex.functions.BiConsumer y = null;
+//    Callable<Long> x = null;
+    Observable<Long> prng = Observable.
+      generate(sc, andReturnFirst); //(next, emitter) -> {
+//        
+//      emitter.onNext(next);// = (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1));
+//      return (next * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
+//      });
+    return prng.skip(1).map(number -> (int)(abs((int)(number >>> 16))/ratio));
   }
 
   /**
@@ -161,23 +182,17 @@ public class PureTimeAndRandomness
   **/
   Observable<String> timeMethodWithRandomInputs(Observable<Integer> random, Function<Integer, ?> method)
   {
-    final Format message = new MessageFormat("Calling timed method with argument {0} took {1}ms");
-    final Observable<Timed<Timed<Integer>>> timedStartsAndFinishes = random.
+    return random.
       timestamp().
-      map(input ->
+      doOnNext(input -> method.apply(input.value())).
+      timestamp().
+      map(timed ->
       {
-        method.apply(input.value());
-        return input;
-      }).
-      timestamp();
-    return timedStartsAndFinishes.map(timed ->
-    {
-      final Integer input = timed.value().value();
-      final long started = timed.value().time();
-      final long finished = timed.time();
-      final long measured = finished - started;
-      final Object[] info = {input, measured};
-      return message.format(info);
-    });
+        final Integer input = timed.value().value();
+        final long started = timed.value().time();
+        final long finished = timed.time();
+        final long measured = finished - started;
+        return format("Calling timed method with argument {0} took {1}ms", input, measured);
+      });
   }
 }
