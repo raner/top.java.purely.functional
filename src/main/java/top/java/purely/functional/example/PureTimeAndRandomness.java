@@ -15,16 +15,16 @@
 //                                                                          //
 package top.java.purely.functional.example;
 
-import java.text.Format;
-import java.text.MessageFormat;
 import java.time.Duration;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
-import java.util.stream.Stream;
+import io.reactivex.Emitter;
 import io.reactivex.Observable;
 import io.reactivex.schedulers.Timed;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.abs;
+import static java.text.MessageFormat.format;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 
@@ -49,8 +49,8 @@ import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterrup
 * 1) to inject a single snapshot of the current system time into the code as a seed value
 * for a random number generator, and 2) to obtain the system time before and after execution
 * of a piece of code (to determine how long the execution took).
-* The Java 8 Stream API is used for creating a simple pseudo-random number generator based on
-* an infinite stream of numbers.
+* The RxJava 2 API is also used for creating a simple pseudo-random number generator based on
+* an infinite observable of numbers.
 * <br>
 * Running this class will produce output about how long it took to execute a method that
 * just consists of a sleep statement. Typically, the measured execution time will be a few
@@ -120,11 +120,10 @@ public class PureTimeAndRandomness
   **/
   Observable<Integer> random(long seed, int max)
   {
-    final double ratio = MAX_VALUE/(double)max;
-    final UnaryOperator<Long> prng = number -> (number * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
-    final Stream<Long> seeds = Stream.iterate(seed, prng).skip(1);
-    final Stream<Integer> random = seeds.map(number -> (int)(number >>> 16));
-    return Observable.fromIterable(random::iterator).map(number -> (int)(abs(number)/ratio));
+    BiFunction<Long, Emitter<Long>, Long> emit = (next, emitter) -> {emitter.onNext(next); return next;};
+    UnaryOperator<Long> next = number -> (number * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
+    return Observable.generate(() -> seed, emit.andThen(next)::apply).skip(1).
+      map(number -> (int)(abs((int)(number >>> 16))/(MAX_VALUE/(double)max)));
   }
 
   /**
@@ -161,23 +160,17 @@ public class PureTimeAndRandomness
   **/
   Observable<String> timeMethodWithRandomInputs(Observable<Integer> random, Function<Integer, ?> method)
   {
-    final Format message = new MessageFormat("Calling timed method with argument {0} took {1}ms");
-    final Observable<Timed<Timed<Integer>>> timedStartsAndFinishes = random.
+    return random.
       timestamp().
-      map(input ->
+      doOnNext(input -> method.apply(input.value())).
+      timestamp().
+      map((Timed<Timed<Integer>> timed) ->
       {
-        method.apply(input.value());
-        return input;
-      }).
-      timestamp();
-    return timedStartsAndFinishes.map(timed ->
-    {
-      final Integer input = timed.value().value();
-      final long started = timed.value().time();
-      final long finished = timed.time();
-      final long measured = finished - started;
-      final Object[] info = {input, measured};
-      return message.format(info);
-    });
+        final Integer input = timed.value().value();
+        final long started = timed.value().time();
+        final long finished = timed.time();
+        final long measured = finished - started;
+        return format("Calling timed method with argument {0} took {1}ms", input, measured);
+      });
   }
 }
