@@ -98,7 +98,7 @@ public class PurePlayAndInteraction
         (
           state.guess().get(),
           state.guess().get(),
-          state.guess()
+          Optional.empty()
         );
       }
     }
@@ -145,8 +145,7 @@ public class PurePlayAndInteraction
 
   boolean stillGuessing(State state)
   {
-    return state.highestPossible() != state.lowestPossible()
-      || state.guess().get() != state.highestPossible();
+    return state.highestPossible() != state.lowestPossible() || state.guess().isPresent();
   }
 
   /**
