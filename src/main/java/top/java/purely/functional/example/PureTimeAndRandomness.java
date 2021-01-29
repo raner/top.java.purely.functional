@@ -16,10 +16,8 @@
 package top.java.purely.functional.example;
 
 import java.time.Duration;
-import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
-import io.reactivex.Emitter;
+import java.util.stream.IntStream;
 import io.reactivex.Flowable;
 import io.reactivex.schedulers.Timed;
 import static java.lang.Integer.MAX_VALUE;
@@ -120,10 +118,9 @@ public class PureTimeAndRandomness
   **/
   Flowable<Integer> random(long seed, int max)
   {
-    BiFunction<Long, Emitter<Long>, Long> emit = (next, emitter) -> {emitter.onNext(next); return next;};
-    UnaryOperator<Long> next = number -> (number * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
-    return Flowable.generate(() -> seed, emit.andThen(next)::apply).skip(1).
-      map(number -> (int)(abs((int)(number >>> 16))/(MAX_VALUE/(double)max)));
+    return Flowable.fromIterable(IntStream.generate(() -> 0)::iterator).
+      scan(seed, (number, ignore) -> (number * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1)).
+      skip(1).map(number -> (int)(abs((int)(number >>> 16))/(MAX_VALUE/(double)max)));
   }
 
   /**
@@ -162,7 +159,7 @@ public class PureTimeAndRandomness
   {
     return random.
       timestamp().
-      doOnNext(input -> method.apply(input.value())).
+      map(input -> returnFirst(input, method.apply(input.value()))).
       timestamp().
       map((Timed<Timed<Integer>> timed) ->
       {
@@ -172,5 +169,21 @@ public class PureTimeAndRandomness
         final long measured = finished - started;
         return format("Calling timed method with argument {0} took {1}ms", input, measured);
       });
+  }
+
+  /**
+  * Always returns the first argument (but forces evaluation of all other arguments).
+  * (Have a look at
+  * <a href="https://stackoverflow.com/questions/50895231">https://stackoverflow.com/questions/50895231</a>
+  * if you have any doubt that this is a highly useful function)
+  *
+  * @param <ANY> the type of the first argument (and the method's return type)
+  * @param first the first argument
+  * @param arguments the rest of the arguments
+  * @return always the first argument
+  **/
+  <ANY> ANY returnFirst(ANY first, Object... arguments)
+  {
+      return first;
   }
 }
