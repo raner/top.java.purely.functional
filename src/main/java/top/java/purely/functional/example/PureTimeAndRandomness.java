@@ -1,5 +1,5 @@
 //                                                                          //
-// Copyright 2019 Mirko Raner                                               //
+// Copyright 2019 - 2021 Mirko Raner                                        //
 //                                                                          //
 // Licensed under the Apache License, Version 2.0 (the "License");          //
 // you may not use this file except in compliance with the License.         //
@@ -20,7 +20,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import io.reactivex.Emitter;
-import io.reactivex.Observable;
+import io.reactivex.Flowable;
 import io.reactivex.schedulers.Timed;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.abs;
@@ -45,7 +45,7 @@ import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterrup
 * to make a decision based on a random number then that random number has to be provided as
 * input into the function.
 * <br>
-* {@link Observable#timestamp()} and the {@link Timed} class are used for dual purposes:
+* {@link Flowable#timestamp()} and the {@link Timed} class are used for dual purposes:
 * 1) to inject a single snapshot of the current system time into the code as a seed value
 * for a random number generator, and 2) to obtain the system time before and after execution
 * of a piece of code (to determine how long the execution took).
@@ -82,7 +82,7 @@ public class PureTimeAndRandomness
     PureTimeAndRandomness instance = new PureTimeAndRandomness();
     Function<Integer, Duration> timedMethod =
       sleep -> instance.sleepForGivenAmountOfMilliseconds(Duration.ofMillis(sleep));
-    Observable.
+    Flowable.
       just(instance).timestamp().
       map(timed -> instance.timeMethodWithRandomInputs(instance.random(timed.time(), 2000), timedMethod)).
       subscribe(execution -> execution.subscribe(System.err::println));
@@ -116,13 +116,13 @@ public class PureTimeAndRandomness
   *
   * @param seed the seed value (often the current system time)
   * @param max the maximum value to be generated (exclusive)
-  * @return an {@link Observable} of an endless stream of random numbers
+  * @return an {@link Flowable} of an endless stream of random numbers
   **/
-  Observable<Integer> random(long seed, int max)
+  Flowable<Integer> random(long seed, int max)
   {
     BiFunction<Long, Emitter<Long>, Long> emit = (next, emitter) -> {emitter.onNext(next); return next;};
     UnaryOperator<Long> next = number -> (number * 0x5DEECE66DL + 0xBL) & ((1L << 48) - 1);
-    return Observable.generate(() -> seed, emit.andThen(next)::apply).skip(1).
+    return Flowable.generate(() -> seed, emit.andThen(next)::apply).skip(1).
       map(number -> (int)(abs((int)(number >>> 16))/(MAX_VALUE/(double)max)));
   }
 
@@ -132,19 +132,19 @@ public class PureTimeAndRandomness
   * into the output via this series of steps:
   * <ul>
   *  <li> <b>input</b> of random integers indicating sleep time
-  *   &rarr; {@link Observable}&lt;{@link Integer}&gt;
+  *   &rarr; {@link Flowable}&lt;{@link Integer}&gt;
   *  <li> time-stamped durations, before timed method is executed
-  *   &rarr; {@link Observable}&lt;{@link Timed}&lt;{@link Integer}&gt;&gt;
+  *   &rarr; {@link Flowable}&lt;{@link Timed}&lt;{@link Integer}&gt;&gt;
   *  <li> time-stamped durations, after timed method was executed
-  *   &rarr; {@link Observable}&lt;{@link Timed}&lt;{@link Integer}&gt;&gt;
+  *   &rarr; {@link Flowable}&lt;{@link Timed}&lt;{@link Integer}&gt;&gt;
   *  <li> durations with both start and finish time stamp
-  *   &rarr; {@link Observable}&lt;{@link Timed}&lt;{@link Timed}&lt;{@link Integer}&gt;&gt;&gt;
+  *   &rarr; {@link Flowable}&lt;{@link Timed}&lt;{@link Timed}&lt;{@link Integer}&gt;&gt;&gt;
   *  <li> <b>output</b> to console, intended for {@link System#out}/{@link System#err}
-  *   &rarr; {@link Observable}&lt;{@link String}&gt;
+  *   &rarr; {@link Flowable}&lt;{@link String}&gt;
   * </ul>
   * As this method is purely functional it cannot just make calls to
   * {@link System#out}{@link java.io.PrintStream#println(String) .println(...)} to inform the user about
-  * its progress. Instead, this method returns an {@link Observable} which then can be subscribed to by
+  * its progress. Instead, this method returns an {@link Flowable} which then can be subscribed to by
   * a consumer (see {@link #main(String...) main} method). In a functional-reactive manner, this method
   * transforms one random number into one output message that includes information about the timed
   * method execution.
@@ -156,9 +156,9 @@ public class PureTimeAndRandomness
   *
   * @param random an infinite series of random numbers
   * @param method the method to be timed
-  * @return an {@link Observable} of messages intended for the console
+  * @return an {@link Flowable} of messages intended for the console
   **/
-  Observable<String> timeMethodWithRandomInputs(Observable<Integer> random, Function<Integer, ?> method)
+  Flowable<String> timeMethodWithRandomInputs(Flowable<Integer> random, Function<Integer, ?> method)
   {
     return random.
       timestamp().
