@@ -55,65 +55,51 @@ public class PurePlayAndInteraction
 
   interface State
   {
-    pro.projo.triples.Factory<State, Integer, Integer, Optional<Integer>> FACTORY =
-      creates(State.class).with(State::lowestPossible, State::highestPossible, State::guess);
+    pro.projo.triples.Factory<State, Integer, Integer, Optional<Float>> FACTORY =
+      creates(State.class).with(State::lowestPossible, State::highestPossible, State::random);
 
     Integer lowestPossible();
     Integer highestPossible();
-    Optional<Integer> guess();
+    Optional<Float> random();
+
+    default State next(final Input input)
+    {
+      if (guess().isPresent()) // A previous guess was made and the user provided feedback:
+      {
+        switch (input.response())
+        {
+          case TOO_BIG: return FACTORY.create(lowestPossible(), guess().get()-1, input.random());
+          case TOO_SMALL: return FACTORY.create(guess().get()+1, highestPossible(), input.random());
+          default: return FACTORY.create(guess().get(), guess().get(), Optional.empty());
+        }
+      }
+      else // This will be the first guess; user input will be ignored:
+      {
+        return FACTORY.create(1, 100, input.random());
+      }
+    }
+
+    default Optional<Integer> guess()
+    {
+      int spread = highestPossible() - lowestPossible();
+      return random().map(it -> lowestPossible() + Math.round(it*spread));
+    }
+
+    default boolean stillGuessing()
+    {
+      return highestPossible() != lowestPossible() || guess().isPresent();
+    }
   }
 
   interface Input
   {
     enum Response {TOO_BIG, TOO_SMALL, CORRECT}
 
-    pro.projo.doubles.Factory<Input, Float, Response> FACTORY =
+    pro.projo.doubles.Factory<Input, Optional<Float>, Response> FACTORY =
       creates(Input.class).with(Input::random, Input::response);
 
-    Float random();
+    Optional<Float> random();
     Response response();
-  }
-
-  State next(final State state, final Input input)
-  {
-    if (state.guess().isPresent())
-    {
-      // A previous guess was made and the user provided feedback:
-      //
-      switch (input.response())
-      {
-        case TOO_BIG: return State.FACTORY.create
-        (
-          state.lowestPossible(),
-          state.guess().get()-1,
-          guessBetween(state.lowestPossible(), state.guess().get()-1, input.random())
-        );
-        case TOO_SMALL: return State.FACTORY.create
-        (
-          state.guess().get()+1,
-          state.highestPossible(),
-          guessBetween(state.guess().get()+1, state.highestPossible(), input.random())
-        );
-        default: return State.FACTORY.create
-        (
-          state.guess().get(),
-          state.guess().get(),
-          Optional.empty()
-        );
-      }
-    }
-    else
-    {
-      // This will be the first guess; user input will be ignored:
-      //
-      return State.FACTORY.create(1, 100, guessBetween(1, 100, input.random()));
-    }
-  }
-
-  Optional<Integer> guessBetween(Integer lowestPossible, Integer highestPossible, Float random)
-  {
-    int spread = highestPossible - lowestPossible;
-    return Optional.of(lowestPossible + Math.round(random*spread));
   }
 
   // TODO: this method is clearly impure
@@ -143,11 +129,6 @@ public class PurePlayAndInteraction
     return "Hit return to start the game.";
   }
 
-  boolean stillGuessing(State state)
-  {
-    return state.highestPossible() != state.lowestPossible() || state.guess().isPresent();
-  }
-
   /**
   * Provides the bridge between the functional-reactive example code and Java's side-effect-based
   * console I/O. This method bootstraps the example object instance and subscribes to the standard
@@ -157,7 +138,8 @@ public class PurePlayAndInteraction
   {
     PurePlayAndInteraction instance = new PurePlayAndInteraction();
     BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-    Flowable<Float> random = Flowable.fromIterable(Stream.generate(instance::random).map(Double::floatValue)::iterator);
+    Flowable<Optional<Float>> random =
+      Flowable.fromIterable(Stream.generate(instance::random).map(Double::floatValue)::iterator).map(Optional::of);
     Flowable<String> prologue = Flowable.just
     (
       "Welcome to the Number Guessing Game!",
@@ -171,8 +153,8 @@ public class PurePlayAndInteraction
     Flowable<String> inputs = Flowable.fromIterable(reader.lines()::iterator);
     Flowable<Response> responses = inputs.map(instance::response);
     Flowable<Input> combination = Flowable.zip(random, responses, Input.FACTORY::create);
-    Flowable<State> states = combination.scan(State.FACTORY.create(1, 100, Optional.empty()), instance::next);
-    Flowable<String> game = Flowable.concat(prologue, states.takeWhile(instance::stillGuessing).map(instance::state));
+    Flowable<State> states = combination.scan(State.FACTORY.create(1, 100, Optional.empty()), State::next);
+    Flowable<String> game = Flowable.concat(prologue, states.takeWhile(State::stillGuessing).map(instance::state));
     Flowable.concat(game, Flowable.just("Good bye!")).subscribe(System.out::println);
   }
 
