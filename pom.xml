@@ -40,6 +40,7 @@
 
  <properties>
   <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+  <projo.version>1.2.0</projo.version>
  </properties>
  
  <dependencies>
@@ -51,7 +52,7 @@
   <dependency>
    <groupId>com.google.guava</groupId>
    <artifactId>guava</artifactId>
-   <version>28.0-jre</version>
+   <version>30.1.1-jre</version>
   </dependency>
   <dependency>
    <groupId>org.apache.commons</groupId>
@@ -61,12 +62,12 @@
   <dependency>
    <groupId>pro.projo</groupId>
    <artifactId>projo</artifactId>
-   <version>1.1.0</version>
+   <version>${projo.version}</version>
   </dependency>
   <dependency>
    <groupId>pro.projo</groupId>
    <artifactId>projo-runtime-code-generation</artifactId>
-   <version>1.1.0</version>
+   <version>${projo.version}</version>
    <scope>runtime</scope>
   </dependency>
  </dependencies>
