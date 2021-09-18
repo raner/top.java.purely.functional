@@ -29,39 +29,24 @@ public interface PureNoughtsAndCrosses extends List<List<Optional<Mark>>>
     interface Series
     {
         Integer index();
+
+        @Override
+        public boolean equals(Object other);
     }
 
     interface Row extends Series
     {
         Factory<Row, Integer> ROWS = creates(Row.class).with(Row::index);
-
-        @Override
-        public boolean equals(Object other);
-
-        @Override
-        public int hashCode();
     }
 
     interface Column extends Series
     {
         Factory<Column, Integer> COLUMNS = creates(Column.class).with(Column::index);
-
-        @Override
-        public boolean equals(Object other);
-
-        @Override
-        public int hashCode();
     }
 
     interface Diagonal extends Series
     {
         Factory<Diagonal, Integer> DIAGONALS = creates(Diagonal.class).with(Diagonal::index);
-
-        @Override
-        public boolean equals(Object other);
-
-        @Override
-        public int hashCode();
     }
     
     interface Counter extends Series {}
