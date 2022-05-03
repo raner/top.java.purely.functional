@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--                                                                          -->
-<!-- Copyright 2019 - 2021 Mirko Raner                                        -->
+<!-- Copyright 2019 - 2022 Mirko Raner                                        -->
 <!--                                                                          -->
 <!-- Licensed under the Apache License, Version 2.0 (the "License");          -->
 <!-- you may not use this file except in compliance with the License.         -->
@@ -42,7 +42,7 @@
   <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   <projo.version>1.3.0</projo.version>
  </properties>
- 
+
  <dependencies>
   <dependency>
    <groupId>io.reactivex.rxjava2</groupId>
@@ -58,6 +58,11 @@
    <groupId>org.apache.commons</groupId>
    <artifactId>commons-lang3</artifactId>
    <version>3.9</version>
+  </dependency>
+  <dependency>
+   <groupId>org.organicdesign</groupId>
+   <artifactId>Paguro</artifactId>
+   <version>3.10.1</version>
   </dependency>
   <dependency>
    <groupId>pro.projo</groupId>
