@@ -28,6 +28,7 @@ import static top.java.purely.functional.example.PureCacheAndCalculation.Commuta
 import static top.java.purely.functional.example.PureCacheAndCalculation.Commutativity.NON_COMMUTATIVE;
 import static top.java.purely.functional.example.PureCacheAndCalculation.Operation.ADDITION;
 import static top.java.purely.functional.example.PureCacheAndCalculation.Operation.EXPONENTIATION;
+import static top.java.purely.functional.example.PureCacheAndCalculation.Operation.MODULATION;
 import static top.java.purely.functional.example.PureCacheAndCalculation.Operation.MULTIPLICATION;
 
 /**
@@ -106,6 +107,13 @@ public class PureCacheAndCalculation
             BigInteger calculate(BigInteger a, BigInteger b)
             {
                 return a.multiply(b);
+            }
+        },
+        MODULATION(NON_COMMUTATIVE)
+        {
+            BigInteger calculate(BigInteger a, BigInteger b)
+            {
+                return a.mod(b);
             }
         },
         EXPONENTIATION(NON_COMMUTATIVE)
@@ -203,6 +211,11 @@ public class PureCacheAndCalculation
     Node mul(Node left, Node right)
     {
         return new Node(MULTIPLICATION, left, right);
+    }
+    
+    Node mod(Node left, Node right)
+    {
+        return new Node(MODULATION, left, right);
     }
     
     Node pow(Node left, Node right)
