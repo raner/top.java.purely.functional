@@ -60,9 +60,9 @@
    <version>3.9</version>
   </dependency>
   <dependency>
-   <groupId>org.organicdesign</groupId>
-   <artifactId>Paguro</artifactId>
-   <version>3.10.1</version>
+   <groupId>org.pcollections</groupId>
+   <artifactId>pcollections</artifactId>
+   <version>3.1.4</version>
   </dependency>
   <dependency>
    <groupId>pro.projo</groupId>

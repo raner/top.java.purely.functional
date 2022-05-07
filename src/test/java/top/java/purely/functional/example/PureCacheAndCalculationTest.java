@@ -15,7 +15,9 @@
 //                                                                          //
 package top.java.purely.functional.example;
 
+import java.math.BigInteger;
 import org.junit.jupiter.api.Test;
+import static java.math.BigInteger.ONE;
 import static java.math.BigInteger.TEN;
 import static java.math.BigInteger.TWO;
 import static java.math.BigInteger.ZERO;
@@ -84,17 +86,17 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
     *                 / \
     *            (3) +   2
     *               / \
-    *          (5) *   2
+    *          (4) *   2
     *             / \
-    *        (7) *   10
+    *        (5) *   10
     *           / \
-    *      (9) +   \
+    *      (6) +   \
     *         / \   \
-    *        2   2   ^ (11)
+    *        2   2   ^ (7)
     *               / \
-    *              2   ^ (13)
+    *              2   ^ (8)
     *                 / \
-    *                2   * (15)
+    *                2   * (9)
     *                   / \
     *                  2   10
     * </pre>
@@ -108,22 +110,22 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
             (
                 add // 3
                 (
-                    mul // 5
+                    mul // 4
                     (
-                        mul // 7
+                        mul // 5
                         (
-                            add // 9
+                            add // 6
                             (
                                 constant(TWO),
                                 constant(TWO)
                             ),
-                            pow // 11
+                            pow // 7
                             (
                                 constant(TWO),
-                                pow // 13
+                                pow // 8
                                 (
                                     constant(TWO),
-                                    mul // 15
+                                    mul // 9
                                     (
                                         constant(TWO),
                                         constant(TEN)
@@ -146,13 +148,17 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
     /**
     * Verifies the result for the following tree (numbers in parentheses indicate operations):
     * <pre>
-    *                (1) +
-    *                   / \
-    *              (2) *   \
-    *                 / \   \
-    *            (3) +   2   + (4)
-    *               / \     / \
-    *          (5) *   2   2   * (6)
+    *                    (0) %
+    *                       / \
+    *                      /   \
+    *                     /     \
+    *                (1) +       +
+    *                   / \     / \
+    *              (2) *   \   1   ^
+    *                 / \   \     / \
+    *            (3) +   2   +   2   *
+    *               / \     / \     / \
+    *          (5) *   2   2   *   2   10
     *             / \         / \ 
     *        (7) *   10     10   * (8)
     *           / \             / \
@@ -172,8 +178,11 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
     @Test
     public void complexExample()
     {
-        Node example = add // 1
+        BigInteger FIVE = BigInteger.valueOf(5);
+        Node example = mod
         (
+          add // 1
+          (
             mul //2
             (
                 add // 3
@@ -196,7 +205,7 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
                                     mul // 15
                                     (
                                         constant(TWO),
-                                        add(constant(TWO), constant(TEN)) // 17
+                                        add(constant(FIVE), constant(TEN)) // 17
                                     )
                                 )
                             )
@@ -229,15 +238,29 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
                                 mul // 16
                                 (
                                     constant(TWO),
-                                    add(constant(TEN), constant(TWO)) // 18
+                                    add(constant(TEN), constant(FIVE)) // 18
                                 )
                             )
                         )
                     )
                 )
             )
+          ),
+          add
+          (
+           constant(ONE),
+           pow // -1
+           (
+            constant(TWO),
+            mul
+            (
+                constant(TWO),
+                constant(TEN)
+            )
+           )
+          )
         );
         Result result = example.calculate();
-        assertEquals("1527611...(+5050434 digits)...4193040", result.toString());
+        assertEquals(1047249, result.value().intValue());
     }
 }
