@@ -84,17 +84,17 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
     *                 / \
     *            (3) +   2
     *               / \
-    *          (5) *   2
+    *          (4) *   2
     *             / \
-    *        (7) *   10
+    *        (5) *   10
     *           / \
-    *      (9) +   \
+    *      (6) +   \
     *         / \   \
-    *        2   2   ^ (11)
+    *        2   2   ^ (7)
     *               / \
-    *              2   ^ (13)
+    *              2   ^ (8)
     *                 / \
-    *                2   * (15)
+    *                2   * (9)
     *                   / \
     *                  2   10
     * </pre>
@@ -108,22 +108,22 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
             (
                 add // 3
                 (
-                    mul // 5
+                    mul // 4
                     (
-                        mul // 7
+                        mul // 5
                         (
-                            add // 9
+                            add // 6
                             (
                                 constant(TWO),
                                 constant(TWO)
                             ),
-                            pow // 11
+                            pow // 7
                             (
                                 constant(TWO),
-                                pow // 13
+                                pow // 8
                                 (
                                     constant(TWO),
-                                    mul // 15
+                                    mul // 9
                                     (
                                         constant(TWO),
                                         constant(TEN)

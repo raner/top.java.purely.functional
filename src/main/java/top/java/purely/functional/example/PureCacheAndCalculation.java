@@ -16,13 +16,14 @@
 package top.java.purely.functional.example;
 
 import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Objects;
-import org.organicdesign.fp.collections.PersistentHashSet;
-import org.organicdesign.fp.collections.PersistentVector;
-import org.organicdesign.fp.collections.UnmodCollection;
-import org.organicdesign.fp.collections.UnmodIterable;
-import org.organicdesign.fp.collections.UnmodIterator;
-import static org.organicdesign.fp.StaticImports.vec;
+import java.util.stream.Stream;
+import org.pcollections.HashTreePBag;
+import org.pcollections.PCollection;
+import org.pcollections.TreePVector;
+import static java.util.stream.Collectors.toList;
 import static top.java.purely.functional.example.PureCacheAndCalculation.Commutativity.COMMUTATIVE;
 import static top.java.purely.functional.example.PureCacheAndCalculation.Commutativity.NON_COMMUTATIVE;
 import static top.java.purely.functional.example.PureCacheAndCalculation.Operation.ADDITION;
@@ -40,12 +41,12 @@ public class PureCacheAndCalculation
 {
     enum Commutativity
     {
-        COMMUTATIVE(PersistentHashSet.empty()),
-        NON_COMMUTATIVE(PersistentVector.empty());
+        COMMUTATIVE(HashTreePBag.empty()),
+        NON_COMMUTATIVE(TreePVector.empty());
         
-        final UnmodCollection<BigInteger> operands;
+        final PCollection<BigInteger> operands;
 
-        Commutativity(UnmodCollection<BigInteger> collection)
+        Commutativity(PCollection<BigInteger> collection)
         {
             operands = collection;
         }
@@ -54,22 +55,22 @@ public class PureCacheAndCalculation
     class Calculation
     {
         private Operation operation;
-        private final UnmodIterable<BigInteger> operands;
+        private final PCollection<BigInteger> operands;
 
         public Calculation(Operation operation, Result... operands)
         {
-            this(operation, vec(operands));
+            this(operation, TreePVector.from(Arrays.asList(operands)));
         }
 
-        public Calculation(Operation operation, UnmodIterable<Result> operands)
+        public Calculation(Operation operation, PCollection<Result> operands)
         {
             this.operation = operation;
-            this.operands = operation.commutativity.operands.concat(operands.map(Result::value));
+            this.operands = operation.commutativity.operands.plusAll(operands.stream().map(Result::value).collect(toList()));
         }
 
         public Result calculate()
         {
-            UnmodIterator<BigInteger> iterator = operands.iterator();
+            Iterator<BigInteger> iterator = operands.iterator();
             return new Result(operation.calculate(iterator.next(), iterator.next()));
         }
 
@@ -163,17 +164,17 @@ public class PureCacheAndCalculation
     class Node
     {
         Operation operation;
-        UnmodIterable<Node> operands;
+        Node[] operands;
 
         Node(Operation operation, Node... operands)
         {
             this.operation = operation;
-            this.operands = vec(operands);
+            this.operands = operands;
         }
 
         Result calculate()
         {
-            Calculation calculation = new Calculation(operation, operands.map(Node::calculate));
+            Calculation calculation = new Calculation(operation, Stream.of(operands).map(Node::calculate).toArray(Result[]::new));
             return calculation.calculate();
         }
     }
