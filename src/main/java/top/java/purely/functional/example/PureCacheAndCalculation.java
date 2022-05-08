@@ -18,10 +18,14 @@ package top.java.purely.functional.example;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.stream.Stream;
+import java.util.function.Function;
 import org.pcollections.HashTreePBag;
+import org.pcollections.HashTreePMap;
 import org.pcollections.PCollection;
+import org.pcollections.PMap;
 import org.pcollections.TreePVector;
 import static java.util.stream.Collectors.toList;
 import static top.java.purely.functional.example.PureCacheAndCalculation.Commutativity.COMMUTATIVE;
@@ -40,6 +44,8 @@ import static top.java.purely.functional.example.PureCacheAndCalculation.Operati
 **/
 public class PureCacheAndCalculation
 {
+    static BigInteger MAX_VALUE = BigInteger.valueOf(Long.MAX_VALUE);
+
     enum Commutativity
     {
         COMMUTATIVE(HashTreePBag.empty()),
@@ -91,6 +97,12 @@ public class PureCacheAndCalculation
         {
             return Objects.hash(operation, operands);
         }
+
+        @Override
+        public String toString()
+        {
+            return "Calculation(" + operation + ")";
+        }
     }
 
     enum Operation
@@ -120,7 +132,7 @@ public class PureCacheAndCalculation
         {
             BigInteger calculate(BigInteger a, BigInteger b)
             {
-                return a.pow(b.intValue());
+                return a.pow(b.intValue()).mod(MAX_VALUE);
             }
         };
 
@@ -137,6 +149,42 @@ public class PureCacheAndCalculation
         }
 
         abstract BigInteger calculate(BigInteger a, BigInteger b);
+    }
+
+    class Cache
+    {
+        PMap<Calculation, Result> cache;
+
+        Cache()
+        {
+            cache = HashTreePMap.empty();
+        }
+
+        Cache(PMap<Calculation, Result> cache)
+        {
+            this.cache = cache;
+        }
+
+        Entry<Cache, Result> cached(Calculation calculation, Function<Calculation, Result> calculate)
+        {
+            // To disable the cache:
+            // return Map.entry(this, calculate.apply(calculation));
+
+            Result cached = cache.get(calculation);
+            if (cached != null)
+            {
+                // Cache hit: return the current cache and the cached value:
+                //
+                return Map.entry(this, cached);
+            }
+            else
+            {
+                // Cache miss: calculate the result and return a new cache that includes the result:
+                //
+                Result result = calculate.apply(calculation);
+                return Map.entry(new Cache(cache.plus(calculation, result)), result);
+            }
+        }
     }
 
     class Result
@@ -180,10 +228,13 @@ public class PureCacheAndCalculation
             this.operands = operands;
         }
 
-        Result calculate()
+        Entry<Cache, Result> calculate(Cache cache)
         {
-            Calculation calculation = new Calculation(operation, Stream.of(operands).map(Node::calculate).toArray(Result[]::new));
-            return calculation.calculate();
+            Entry<Cache, Result> left = operands[0].calculate(cache);
+            Entry<Cache, Result> right = operands[1].calculate(left.getKey());
+            Calculation calculation = new Calculation(operation, left.getValue(), right.getValue());
+            Entry<Cache, Result> result = right.getKey().cached(calculation, Calculation::calculate);
+            return result;
         }
     }
 
@@ -197,9 +248,9 @@ public class PureCacheAndCalculation
         }
         
         @Override
-        Result calculate()
+        Entry<Cache, Result> calculate(Cache cache)
         {
-            return new Result(value);
+            return Map.entry(cache, new Result(value));
         }
     }
 

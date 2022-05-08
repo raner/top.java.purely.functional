@@ -73,7 +73,7 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
                 )
             )
         );
-        Result result = example.calculate();
+        Result result = example.calculate(new Cache()).getValue();
         assertEquals(2252, result.value().intValue());
     }
     
@@ -141,8 +141,8 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
             ),
             constant(ZERO)
         );
-        Result result = example.calculate();
-        assertEquals("5392912...(+315641 digits)...6330884", result.toString());
+        Result result = example.calculate(new Cache()).getValue();
+        assertEquals("1284", result.toString());
     }
 
     /**
@@ -260,7 +260,7 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
            )
           )
         );
-        Result result = example.calculate();
-        assertEquals(1047249, result.value().intValue());
+        Result result = example.calculate(new Cache()).getValue();
+        assertEquals(184, result.value().intValue());
     }
 }
