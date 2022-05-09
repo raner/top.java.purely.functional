@@ -151,6 +151,29 @@ public class PureCacheAndCalculation
         abstract BigInteger calculate(BigInteger a, BigInteger b);
     }
 
+    interface State<STATE, PRIMARY> extends Function<STATE, Entry<STATE, PRIMARY>>
+    {
+      default <OTHER> State<STATE, OTHER> map(Function<PRIMARY, OTHER> function)
+      {
+        State<STATE, PRIMARY> that = this;
+        return state ->
+        {
+          Entry<STATE, PRIMARY> value = that.apply(state);
+          return Map.entry(value.getKey(), function.apply(value.getValue()));
+        };
+      }
+
+      default <OTHER> State<STATE, OTHER> flatMap(Function<PRIMARY, State<STATE, OTHER>> function)
+      {
+        State<STATE, PRIMARY> that = this;
+        return state ->
+        {
+          Entry<STATE, PRIMARY> value = that.apply(state);
+          return function.apply(value.getValue()).apply(value.getKey());
+        };
+      }
+    }
+
     class Cache
     {
         final PMap<Calculation, Result> cache;
@@ -231,13 +254,18 @@ public class PureCacheAndCalculation
             this.operands = operands;
         }
 
-        Entry<Cache, Result> calculate(Cache cache)
+        State<Cache, Result> calculate()
         {
-            Entry<Cache, Result> left = operands[0].calculate(cache);
-            Entry<Cache, Result> right = operands[1].calculate(left.getKey());
-            Calculation calculation = new Calculation(operation, left.getValue(), right.getValue());
-            Entry<Cache, Result> result = right.getKey().cached(calculation, Calculation::calculate);
-            return result;
+            return cache ->
+            {
+                State<Cache, Result> left = operands[0].calculate();
+                Entry<Cache, Result> leftEntry = left.apply(cache);
+                State<Cache, Result> right = operands[1].calculate();
+                Entry<Cache, Result> rightEntry = right.apply(leftEntry.getKey());
+                Calculation calculation = new Calculation(operation, leftEntry.getValue(), rightEntry.getValue());
+                Entry<Cache, Result> entry = rightEntry.getKey().cached(calculation, Calculation::calculate);
+                return entry;
+            };
         }
     }
 
@@ -251,9 +279,12 @@ public class PureCacheAndCalculation
         }
         
         @Override
-        Entry<Cache, Result> calculate(Cache cache)
+        State<Cache, Result> calculate()
         {
-            return Map.entry(cache, new Result(value));
+            return cache ->
+            {
+                return Map.entry(cache, new Result(value));
+            };
         }
     }
 

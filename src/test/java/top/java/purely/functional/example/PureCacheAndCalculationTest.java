@@ -74,10 +74,10 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
                 )
             )
         );
-        Result result = example.calculate(new Cache()).getValue();
+        Result result = example.calculate().apply(new Cache()).getValue();
         assertEquals(2252, result.value().intValue());
     }
-    
+
     /**
     * Verifies the result for the following tree (numbers in parentheses indicate operations):
     * <pre>
@@ -142,7 +142,7 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
             ),
             constant(ZERO)
         );
-        Result result = example.calculate(new Cache()).getValue();
+        Result result = example.calculate().apply(new Cache()).getValue();
         assertEquals("1284", result.toString());
     }
 
@@ -261,7 +261,7 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
            )
           )
         );
-        Entry<Cache, Result> result = example.calculate(new Cache());
+        Entry<Cache, Result> result = example.calculate().apply(new Cache());
         assertEquals(184, result.getValue().value().intValue());
         assertEquals(5, result.getKey().hits);
     }
