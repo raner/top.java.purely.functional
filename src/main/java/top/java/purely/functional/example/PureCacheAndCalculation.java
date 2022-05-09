@@ -258,12 +258,12 @@ public class PureCacheAndCalculation
         {
             return cache ->
             {
-                State<Cache, Entry<Result, Result>> results = operands[0].calculate().flatMap
+                State<Cache, Calculation> results = operands[0].calculate().flatMap
                 (
-                    result -> operands[1].calculate().map(operand -> Map.entry(result, operand))
+                    result -> operands[1].calculate().map(operand -> new Calculation(operation, result, operand))
                 );
-                Entry<Cache, Entry<Result, Result>> applied = results.apply(cache);
-                Calculation calculation = new Calculation(operation, applied.getValue().getKey(), applied.getValue().getValue());
+                Entry<Cache, Calculation> applied = results.apply(cache);
+                Calculation calculation = applied.getValue();
                 Entry<Cache, Result> entry = applied.getKey().cached(calculation, Calculation::calculate);
                 return entry;
             };
