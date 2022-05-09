@@ -153,16 +153,19 @@ public class PureCacheAndCalculation
 
     class Cache
     {
-        PMap<Calculation, Result> cache;
+        final PMap<Calculation, Result> cache;
+        final int hits;
 
         Cache()
         {
             cache = HashTreePMap.empty();
+            hits = 0;
         }
 
-        Cache(PMap<Calculation, Result> cache)
+        Cache(PMap<Calculation, Result> cache, int hits)
         {
             this.cache = cache;
+            this.hits = hits;
         }
 
         Entry<Cache, Result> cached(Calculation calculation, Function<Calculation, Result> calculate)
@@ -175,14 +178,14 @@ public class PureCacheAndCalculation
             {
                 // Cache hit: return the current cache and the cached value:
                 //
-                return Map.entry(this, cached);
+                return Map.entry(new Cache(cache, hits+1), cached);
             }
             else
             {
                 // Cache miss: calculate the result and return a new cache that includes the result:
                 //
                 Result result = calculate.apply(calculation);
-                return Map.entry(new Cache(cache.plus(calculation, result)), result);
+                return Map.entry(new Cache(cache.plus(calculation, result), hits), result);
             }
         }
     }
