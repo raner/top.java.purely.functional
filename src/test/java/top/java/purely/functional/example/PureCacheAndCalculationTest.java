@@ -16,6 +16,7 @@
 package top.java.purely.functional.example;
 
 import java.math.BigInteger;
+import java.util.Map.Entry;
 import org.junit.jupiter.api.Test;
 import static java.math.BigInteger.ONE;
 import static java.math.BigInteger.TEN;
@@ -260,7 +261,8 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
            )
           )
         );
-        Result result = example.calculate(new Cache()).getValue();
-        assertEquals(184, result.value().intValue());
+        Entry<Cache, Result> result = example.calculate(new Cache());
+        assertEquals(184, result.getValue().value().intValue());
+        assertEquals(5, result.getKey().hits);
     }
 }
