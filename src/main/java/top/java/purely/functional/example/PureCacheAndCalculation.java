@@ -259,9 +259,11 @@ public class PureCacheAndCalculation
             return cache ->
             {
                 State<Cache, Result> left = operands[0].calculate();
+                Entry<Cache, Result> leftEntry = left.apply(cache);
                 State<Cache, Result> right = operands[1].calculate();
-                Calculation calculation = new Calculation(operation, left.apply(cache).getValue(), right.apply(cache).getValue());
-                Entry<Cache, Result> entry = cache.cached(calculation, Calculation::calculate);
+                Entry<Cache, Result> rightEntry = right.apply(leftEntry.getKey());
+                Calculation calculation = new Calculation(operation, leftEntry.getValue(), rightEntry.getValue());
+                Entry<Cache, Result> entry = rightEntry.getKey().cached(calculation, Calculation::calculate);
                 return entry;
             };
         }
