@@ -249,10 +249,7 @@ public class PureCacheAndCalculation
         @Override
         Result calculate()
         {
-            return cache ->
-            {
-                return Map.entry(cache, value);
-            };
+            return cache -> Map.entry(cache, value);
         }
     }
 
