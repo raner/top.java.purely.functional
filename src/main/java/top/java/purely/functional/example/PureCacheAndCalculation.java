@@ -256,17 +256,11 @@ public class PureCacheAndCalculation
 
         State<Cache, Result> calculate()
         {
-            return cache ->
-            {
-                State<Cache, Calculation> results = operands[0].calculate().flatMap
-                (
-                    result -> operands[1].calculate().map(operand -> new Calculation(operation, result, operand))
-                );
-                Entry<Cache, Calculation> applied = results.apply(cache);
-                Calculation calculation = applied.getValue();
-                Entry<Cache, Result> entry = applied.getKey().cached(calculation, Calculation::calculate);
-                return entry;
-            };
+            return operands[0].calculate().flatMap
+            (
+                result -> operands[1].calculate().map(operand -> new Calculation(operation, result, operand))
+            )
+            .flatMap(calculation -> cache -> cache.cached(calculation, Calculation::calculate));
         }
     }
 
