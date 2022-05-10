@@ -38,7 +38,7 @@ import static top.java.purely.functional.example.PureCacheAndCalculation.Operati
 /**
 * The {@link PureCacheAndCalculation} example demonstrates how intermediate results can be cached
 * using a purely functional and therefore immutable (!) cache.
-* This example also demonstrates the use of the Paguro purely functional data structure library.
+* This example also demonstrates the use of the PCollections purely functional data structure library.
 *
 * @author Mirko Raner
 **/
@@ -256,16 +256,11 @@ public class PureCacheAndCalculation
 
         State<Cache, Result> calculate()
         {
-            return cache ->
-            {
-                State<Cache, Result> left = operands[0].calculate();
-                Entry<Cache, Result> leftEntry = left.apply(cache);
-                State<Cache, Result> right = operands[1].calculate();
-                Entry<Cache, Result> rightEntry = right.apply(leftEntry.getKey());
-                Calculation calculation = new Calculation(operation, leftEntry.getValue(), rightEntry.getValue());
-                Entry<Cache, Result> entry = rightEntry.getKey().cached(calculation, Calculation::calculate);
-                return entry;
-            };
+            return operands[0].calculate().flatMap
+            (
+                result -> operands[1].calculate().map(operand -> new Calculation(operation, result, operand))
+            )
+            .flatMap(calculation -> cache -> cache.cached(calculation, Calculation::calculate));
         }
     }
 
