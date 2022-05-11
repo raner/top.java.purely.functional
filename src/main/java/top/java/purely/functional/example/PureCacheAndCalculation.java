@@ -64,21 +64,21 @@ public class PureCacheAndCalculation
         private Operation operation;
         private final PCollection<BigInteger> operands;
 
-        public Calculation(Operation operation, Result... operands)
+        public Calculation(Operation operation, BigInteger... operands)
         {
             this(operation, TreePVector.from(Arrays.asList(operands)));
         }
 
-        public Calculation(Operation operation, PCollection<Result> operands)
+        public Calculation(Operation operation, PCollection<BigInteger> operands)
         {
             this.operation = operation;
-            this.operands = operation.commutativity.operands.plusAll(operands.stream().map(Result::value).collect(toList()));
+            this.operands = operation.commutativity.operands.plusAll(operands.stream().collect(toList()));
         }
 
-        public Result calculate()
+        public BigInteger calculate()
         {
             Iterator<BigInteger> iterator = operands.iterator();
-            return new Result(operation.calculate(iterator.next(), iterator.next()));
+            return operation.calculate(iterator.next(), iterator.next());
         }
 
         @Override
@@ -176,7 +176,7 @@ public class PureCacheAndCalculation
 
     class Cache
     {
-        final PMap<Calculation, Result> cache;
+        final PMap<Calculation, BigInteger> cache;
         final int hits;
 
         Cache()
@@ -185,18 +185,18 @@ public class PureCacheAndCalculation
             hits = 0;
         }
 
-        Cache(PMap<Calculation, Result> cache, int hits)
+        Cache(PMap<Calculation, BigInteger> cache, int hits)
         {
             this.cache = cache;
             this.hits = hits;
         }
-
-        Entry<Cache, Result> cached(Calculation calculation, Function<Calculation, Result> calculate)
+        
+        Entry<Cache, BigInteger> cached(Calculation calculation, Function<Calculation, BigInteger> calculate)
         {
             // To disable the cache:
             // return Map.entry(this, calculate.apply(calculation));
 
-            Result cached = cache.get(calculation);
+            BigInteger cached = cache.get(calculation);
             if (cached != null)
             {
                 // Cache hit: return the current cache and the cached value:
@@ -207,41 +207,13 @@ public class PureCacheAndCalculation
             {
                 // Cache miss: calculate the result and return a new cache that includes the result:
                 //
-                Result result = calculate.apply(calculation);
+                BigInteger result = calculate.apply(calculation);
                 return Map.entry(new Cache(cache.plus(calculation, result), hits), result);
             }
         }
     }
 
-    class Result
-    {
-        BigInteger value;
-
-        public Result(BigInteger value)
-        {
-            this.value = value;
-        }
-
-        BigInteger value()
-        {
-            return value;
-        }
-        
-        public String toString()
-        {
-            String string = value.toString();
-            if (string.length() <= 32)
-            {
-                return string;
-            }
-            else
-            {
-                return string.substring(0,7)
-                    + "...(+" + (string.length()-14) + " digits)..."
-                    + string.substring(string.length()-7);
-            }
-        }
-    }
+    interface Result extends State<Cache, BigInteger> {}
 
     class Node
     {
@@ -254,13 +226,14 @@ public class PureCacheAndCalculation
             this.operands = operands;
         }
 
-        State<Cache, Result> calculate()
+        Result calculate()
         {
-            return operands[0].calculate().flatMap
+            return state -> operands[0].calculate().flatMap
             (
                 result -> operands[1].calculate().map(operand -> new Calculation(operation, result, operand))
             )
-            .flatMap(calculation -> cache -> cache.cached(calculation, Calculation::calculate));
+            .flatMap(calculation -> cache -> cache.cached(calculation, Calculation::calculate))
+            .apply(state);
         }
     }
 
@@ -274,12 +247,9 @@ public class PureCacheAndCalculation
         }
         
         @Override
-        State<Cache, Result> calculate()
+        Result calculate()
         {
-            return cache ->
-            {
-                return Map.entry(cache, new Result(value));
-            };
+            return cache -> Map.entry(cache, value);
         }
     }
 

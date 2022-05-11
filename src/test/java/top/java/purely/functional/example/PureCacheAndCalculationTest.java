@@ -74,8 +74,8 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
                 )
             )
         );
-        Result result = example.calculate().apply(new Cache()).getValue();
-        assertEquals(2252, result.value().intValue());
+        BigInteger result = example.calculate().apply(new Cache()).getValue();
+        assertEquals(2252, result.intValue());
     }
 
     /**
@@ -142,8 +142,8 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
             ),
             constant(ZERO)
         );
-        Result result = example.calculate().apply(new Cache()).getValue();
-        assertEquals("1284", result.toString());
+        BigInteger result = example.calculate().apply(new Cache()).getValue();
+        assertEquals(1284, result.intValue());
     }
 
     /**
@@ -261,8 +261,8 @@ public class PureCacheAndCalculationTest extends PureCacheAndCalculation
            )
           )
         );
-        Entry<Cache, Result> result = example.calculate().apply(new Cache());
-        assertEquals(184, result.getValue().value().intValue());
+        Entry<Cache, BigInteger> result = example.calculate().apply(new Cache());
+        assertEquals(184, result.getValue().intValue());
         assertEquals(5, result.getKey().hits);
     }
 }
