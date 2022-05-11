@@ -174,7 +174,7 @@ public class PureCacheAndCalculation
       }
     }
 
-    class Cache
+    static class Cache
     {
         final PMap<Calculation, BigInteger> cache;
         final int hits;
@@ -213,7 +213,13 @@ public class PureCacheAndCalculation
         }
     }
 
-    interface Result extends State<Cache, BigInteger> {}
+    interface Result extends State<Cache, BigInteger>
+    {
+        default BigInteger getValue()
+        {
+            return apply(new Cache()).getValue();
+        }
+    }
 
     class Node
     {
