@@ -18,7 +18,6 @@ package top.java.purely.functional.example;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.function.Function;
@@ -27,6 +26,7 @@ import org.pcollections.HashTreePMap;
 import org.pcollections.PCollection;
 import org.pcollections.PMap;
 import org.pcollections.TreePVector;
+import static java.util.Map.entry;
 import static java.util.stream.Collectors.toList;
 import static top.java.purely.functional.example.PureCacheAndCalculation.Commutativity.COMMUTATIVE;
 import static top.java.purely.functional.example.PureCacheAndCalculation.Commutativity.NON_COMMUTATIVE;
@@ -155,20 +155,18 @@ public class PureCacheAndCalculation
     {
       default <OTHER> State<STATE, OTHER> map(Function<PRIMARY, OTHER> function)
       {
-        State<STATE, PRIMARY> that = this;
         return state ->
         {
-          Entry<STATE, PRIMARY> value = that.apply(state);
-          return Map.entry(value.getKey(), function.apply(value.getValue()));
+          Entry<STATE, PRIMARY> value = this.apply(state);
+          return entry(value.getKey(), function.apply(value.getValue()));
         };
       }
 
       default <OTHER> State<STATE, OTHER> flatMap(Function<PRIMARY, State<STATE, OTHER>> function)
       {
-        State<STATE, PRIMARY> that = this;
         return state ->
         {
-          Entry<STATE, PRIMARY> value = that.apply(state);
+          Entry<STATE, PRIMARY> value = this.apply(state);
           return function.apply(value.getValue()).apply(value.getKey());
         };
       }
@@ -201,14 +199,14 @@ public class PureCacheAndCalculation
             {
                 // Cache hit: return the current cache and the cached value:
                 //
-                return Map.entry(new Cache(cache, hits+1), cached);
+                return entry(new Cache(cache, hits+1), cached);
             }
             else
             {
                 // Cache miss: calculate the result and return a new cache that includes the result:
                 //
                 BigInteger result = calculate.apply(calculation);
-                return Map.entry(new Cache(cache.plus(calculation, result), hits), result);
+                return entry(new Cache(cache.plus(calculation, result), hits), result);
             }
         }
     }
@@ -255,7 +253,7 @@ public class PureCacheAndCalculation
         @Override
         Result calculate()
         {
-            return cache -> Map.entry(cache, value);
+            return cache -> entry(cache, value);
         }
     }
 
