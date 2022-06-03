@@ -157,7 +157,7 @@ public class PureCacheAndCalculation
       {
         return state ->
         {
-          Entry<STATE, PRIMARY> value = this.apply(state);
+          Entry<STATE, PRIMARY> value = apply(state);
           return entry(value.getKey(), function.apply(value.getValue()));
         };
       }
@@ -166,7 +166,7 @@ public class PureCacheAndCalculation
       {
         return state ->
         {
-          Entry<STATE, PRIMARY> value = this.apply(state);
+          Entry<STATE, PRIMARY> value = apply(state);
           return function.apply(value.getValue()).apply(value.getKey());
         };
       }
